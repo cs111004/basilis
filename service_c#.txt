@@ -1,0 +1,75 @@
+<%@ WebHandler Language="C#" Class="MyHandler" %>
+ 
+using System;
+using System.Web;
+using System.Net;
+using System.Text;
+using System.IO;
+ 
+public class MyHandler : IHttpHandler
+{
+ 
+    public void ProcessRequest(HttpContext context)
+    {
+        context.Response.ContentType = "text//plain";
+        var aStream = context.Request.InputStream;
+        string jsonParams = "";
+        if (aStream.Length > 0)  //POST & more
+        {
+            using (StreamReader reader = new StreamReader(aStream))
+            {
+                jsonParams = reader.ReadToEnd();
+            }
+ 
+        }
+        if (String.IsNullOrEmpty(jsonParams))
+            context.Response.Write(executeRequest("{\"data\":\"Empty Params\"}"));
+        else
+            context.Response.Write(executeRequest(jsonParams));
+ 
+ 
+    }
+ 
+    public bool IsReusable
+    {
+        get
+        {
+            return false;
+        }
+    }
+ 
+ 
+    private static string executeRequest(string postData)
+    {
+        HttpWebRequest request = HttpWebRequest.Create("http://192.168.0.118/s1services") as HttpWebRequest;
+        //postData = "{\"SERVICE\": \"login\",\"APPID\": 258,\"USERNAME\": \"demo\",\"PASSWORD\": \"demo\"}";
+ 
+        request.Method = "POST";
+        byte[] byteArray = Encoding.UTF8.GetBytes(postData);
+        request.ContentType = "application/x-www-form-urlencoded";
+        request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+        request.ContentLength = byteArray.Length;
+ 
+        Stream dataStream = request.GetRequestStream();
+        dataStream.Write(byteArray, 0, byteArray.Length);
+        dataStream.Close();
+ 
+        string responseFromServer = "";
+        Encoding Soft1Encoding = Encoding.GetEncoding(1253);
+ 
+        using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
+        {
+            using (Stream responseStream = response.GetResponseStream())
+            {
+                using (StreamReader reader = new StreamReader(responseStream, Soft1Encoding))
+                {
+                    responseFromServer = reader.ReadToEnd();
+                }
+            }
+        }
+ 
+        return responseFromServer;
+    }
+ 
+}
+ 
